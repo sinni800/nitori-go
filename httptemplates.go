@@ -80,19 +80,8 @@ var (
 	<body>
 		Guest: 
 		<ul class="nav">
-				<li><a href="/kawaii">Kawaiiface</a></li>
-				<li><a href="/dna">DNA</a></li>
-				<li><a href="/joke">Joke</a></li>
-				<li><a href="/rape">Rape</a></li>
-				<li><a href="/kill">Kill</a></li>
-				<li><a href="/factoid">Factoid</a></li>
-				<li><a href="/yomama">Yomama</a></li>
-				<li><a href="/Gelbooru/Random">Gelbooru Random</a></li>
 				<li><a href="/Files">Files</a></li>
 				<li><a href="/Auth">Login</a></li>
-				
-				<!--<li><a href="/Irc">Irc</a></li>
-				<li><a href="/Irc/Latest">IrcLog</a></li>--> 
 		</ul>
 		
 		Admin: 
