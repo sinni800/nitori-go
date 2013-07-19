@@ -5,7 +5,7 @@ import (
 	"github.com/robertkrimen/otto"
 	"io/ioutil"
 	"net/http"
-	"sms77"
+	"github.com/sinni800/gosms77"
 )
 
 type jsIRCStruct struct {
