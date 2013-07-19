@@ -57,13 +57,6 @@ func handleHttpFuncs() {
 		Template("").Execute(w, nil)
 	})
 
-	HttpHandleFunc("/kawaii", Kawaiiface)
-	HttpHandleFunc("/dna", DNA)
-	HttpHandleFunc("/joke", Joke)
-	HttpHandleFunc("/rape", Rape)
-	HttpHandleFunc("/kill", Kill)
-	HttpHandleFunc("/factoid", Factoid)
-	HttpHandleFunc("/yomama", Yomama)
 	HttpHandleFunc("/Gelbooru/Random", GelRandom)
 
 	HttpHandleFunc("/FileUpload", GridFSFile)
@@ -384,56 +377,6 @@ func GridFSFile(w http.ResponseWriter, rew *http.Request) {
 			"<html><head></head><body><form enctype=\"multipart/form-data\" action=\"/FileUpload\" method=\"POST\">File: <input type=\"file\" name=\"file\" /><br />Filename: <input type=\"text\" name=\"filename\" /><br /><input type=\"submit\" name=\"submit\" value=\"Submit\" /></form></body></html>")
 	}
 
-}
-
-func Joke(w http.ResponseWriter, rew *http.Request) {
-	coll := MongoDB.C("joke")
-	var result []bson.M
-	coll.Find(nil).All(&result)
-	Template(TemplateSingleColumnTable).Execute(w, result)
-}
-
-func Rape(w http.ResponseWriter, rew *http.Request) {
-	coll := MongoDB.C("rape")
-	var result []bson.M
-	coll.Find(nil).All(&result)
-	Template(TemplateSingleColumnTable).Execute(w, result)
-}
-
-func Kill(w http.ResponseWriter, rew *http.Request) {
-	coll := MongoDB.C("kill")
-	var result []bson.M
-	coll.Find(nil).All(&result)
-	Template(TemplateSingleColumnTable).Execute(w, result)
-}
-
-func Factoid(w http.ResponseWriter, rew *http.Request) {
-	coll := MongoDB.C("factoid")
-	var result []bson.M
-	coll.Find(nil).All(&result)
-	Template(TemplateSingleColumnTable).Execute(w, result)
-}
-
-func Yomama(w http.ResponseWriter, rew *http.Request) {
-	coll := MongoDB.C("yomama")
-	var result []bson.M
-	coll.Find(nil).All(&result)
-	Template(TemplateSingleColumnTable).Execute(w, result)
-}
-
-func DNA(w http.ResponseWriter, rew *http.Request) {
-	coll := MongoDB.C("dna")
-	var result []bson.M
-	coll.Find(nil).All(&result)
-	Template(TemplateDNATable).Execute(w, result)
-
-}
-
-func Kawaiiface(w http.ResponseWriter, rew *http.Request) {
-	coll := MongoDB.C("kawaiiface")
-	var result []bson.M
-	coll.Find(nil).All(&result)
-	Template(TemplateKawaiiTable).Execute(w, result)
 }
 
 func GelRandom(w http.ResponseWriter, rew *http.Request) {
