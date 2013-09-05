@@ -3,7 +3,6 @@ package main
 import (
 	"crypto"
 	"errors"
-	"flag"
 	"fmt"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -14,26 +13,20 @@ import (
 var MongoSession *mgo.Session
 var MongoDB *mgo.Database
 
-var fMongoAddress *string = flag.String("mongo.address", "mongodb://user:pass@host/", "Mongo Database Address")
-var fMongoDatabase *string = flag.String("mongo.dbname", "dbname", "Mongo Database Name")
-var fUseMongo *bool = flag.Bool("mongo.active", false, "Use Mongo Database")
-var MongoAddress string
-var MongoDatabase string
-var UseMongo bool
-
-func init() {
-	flag.Parse()
-	MongoAddress = *fMongoAddress
-	MongoDatabase = *fMongoDatabase
-	UseMongo = *fUseMongo
+func connectDB() {
+	MongoSession, _ = mgo.Dial(conf.Mongo.MongoAddress)
+	MongoDB = MongoSession.DB(conf.Mongo.MongoDatabase)
 }
 
-func connectDB() {
-	if UseMongo {
-		MongoSession, _ = mgo.Dial(MongoAddress)
-		MongoDB = MongoSession.DB(MongoDatabase)
+func reconnectDB() error {
+	if MongoSession == nil || MongoSession.Ping() != nil {
+		MongoSession, err := mgo.Dial(conf.Mongo.MongoAddress)
+		if err != nil {
+			return err
+		}
+		MongoDB = MongoSession.DB(conf.Mongo.MongoDatabase)
 	}
-
+	return nil
 }
 
 func Authenticate(username string, password string) bool {
@@ -68,9 +61,9 @@ func AuthenticateHashedPW(username string, passwordhash string) bool {
 	return false
 }
 
-func SaveToDB(collection string, stuff bson.M) {
+func SaveToDB(collection string, stuff bson.M) error {
 	coll := MongoDB.C(collection)
-	coll.Insert(stuff)
+	return coll.Insert(stuff)
 }
 
 func ExistsInDB(collection string, stuff bson.M) bool {
@@ -81,6 +74,12 @@ func ExistsInDB(collection string, stuff bson.M) bool {
 		return false
 	}
 	return false
+}
+
+func GetFromDB(collection string, selector bson.M) ([]bson.M, error) {
+	coll := MongoDB.C(collection)
+	output := make([]bson.M, 0, 0)
+	return output, coll.Find(selector).All(&output)
 }
 
 func GetRandomFromDB(collection string) (bson.M, error) {
@@ -96,7 +95,7 @@ func GetRandomFromDB(collection string) (bson.M, error) {
 	}
 
 	result := bson.M{}
-	coll.Find(nil).Skip(rand.Intn(count - 1)).One(&result)
+	coll.Find(nil).Limit(-1).Skip(rand.Intn(count)).One(&result)
 
 	return result, nil
 }
@@ -160,4 +159,12 @@ func SaveNamedToDB(collection string, stuff bson.M) (err error) {
 	}
 
 	return
+}
+
+func DeleteNamedFromDB(collection string, name string) (err error) {
+	return MongoDB.C(collection).Remove(bson.M{"name": name})
+}
+
+func DeleteFromDB(collection string, selector bson.M) (err error) {
+	return MongoDB.C(collection).Remove(selector)
 }

@@ -1,0 +1,32 @@
+<h2>Index of {{.path}} - {{.prefix}}</h2>
+
+<table>
+	{{range .files}}
+	<tr>
+		<td><a href="{{.filename}}">{{.filename}}{{if .IsDir}}/{{end}}</a></td>
+			{{if $.auth}}
+				<td><a href="/FileDelete?file={{.filename}}&prefix={{$.prefix}}">Delete</a></td>
+			{{end}}
+	</tr>
+	{{end}}
+</table>
+
+{{if .auth}}
+<form enctype="multipart/form-data" method="POST" action="/FileUpload">
+	<input type="hidden" name="prefix" value="Grid" />
+
+	<table>
+		<tr>
+			<td>File: </td>
+			<td><input type="file" name="file" /></td>
+		</tr>
+		<tr>
+			<td>Filename: </td>
+			<td><input type="text" name="filename" /></td>
+		</tr>
+		<tr>
+			<td>&nbsp;</td>
+			<td><input type="submit" name="submit" value="Submit" /></td>
+		</tr>
+</form>
+{{end}}

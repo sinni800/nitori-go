@@ -1,0 +1,19 @@
+Uploading into {{.prefix}}{{if .folder}}/{{.folder}}{{end}}
+<form enctype="multipart/form-data" method="POST">
+	<table>
+		<tr>
+			<td>File: </td>
+			<td><input type="file" name="file" /></td>
+		</tr>
+		<tr>
+			<td>Filename: </td>
+			<td><input type="text" name="filename" /></td>
+		<tr>
+			<td>Unpack ZIP</td>
+			<td><input type="checkbox" name="unzip" /></td>
+		</tr>
+		<tr>
+			<td>&nbsp;</td>
+			<td><input type="submit" name="submit" value="Submit" /></td>
+		</tr>
+</form>

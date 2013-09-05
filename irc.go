@@ -1,72 +1,149 @@
 package main
 
 import (
-	"flag"
-	"fmt"
+	//"fmt"
 	"github.com/thoj/go-ircevent"
-	"os"
+	//"os"
 	//"strconv"
 	//"container/vector"
+	"errors"
 	"strings"
+	"time"
 )
 
-var Irccon *irc.Connection
-
-var fNickname *string = flag.String("nick", "nitori", "Nickname")
-var fNicknameregex *string = flag.String("nickregex", "natori(?:-chan)?", "Nick Regex")
-var fServer *string = flag.String("host", "irc.freenode.net:6667", "IRC server")
-var fChannel *string = flag.String("channel", "##rlc", "IRC channel")
-var fNickservpwd *string = flag.String("nickservpwd", "meruto", "Nickserv password")
-
-var Nickname string
-var Nicknameregex string
-var Server string
-var Channel string
-var Nickservpwd string
-
-//var AdditionalChannels []string
-
-func init() {
-
-	flag.Parse()
-	Nickname = *fNickname
-	Nicknameregex = *fNicknameregex
-	Server = *fServer
-	Channel = *fChannel
-	Nickservpwd = *fNickservpwd
-	//AdditionalChannels = make([]string, 0, 0)
+type ChannelLogStack struct {
+	channel     string
+	stack       []IrcChannelLogMessage
+	stackLength int
+	stackStart  int
 }
 
-func IrcGetMessageSource(e *irc.Event) string {
+func (c *ChannelLogStack) Full() bool {
+	return c.stackLength == len(c.stack)
+}
+
+func (c *ChannelLogStack) Push(msg IrcChannelLogMessage) error {
+	if c.stackLength == len(c.stack) {
+		return errors.New("Max length reached")
+	}
+	c.stackLength++
+	c.stack[(c.stackStart+c.stackLength-1)%len(c.stack)] = msg
+	return nil
+}
+
+func (c *ChannelLogStack) Pop() (ret IrcChannelLogMessage) {
+	if c.stackLength == 0 {
+		ret = IrcChannelLogMessage{}
+		return
+	}
+	ret = c.stack[c.stackStart]
+	c.stackStart++
+	if c.stackStart > (len(c.stack) - 1) {
+		c.stackStart = 0
+	}
+
+	c.stackLength--
+	return
+}
+
+func (c *ChannelLogStack) PushPopFull(msg IrcChannelLogMessage) (retmsg IrcChannelLogMessage) {
+	if c.Full() {
+		retmsg = c.Pop()
+	}
+	c.Push(msg)
+	return
+}
+
+func NewChannelLogStack(channel string) *ChannelLogStack {
+	c := &ChannelLogStack{}
+	c.channel = channel
+	c.stack = make([]IrcChannelLogMessage, 200)
+	c.stackLength = 0
+	c.stackStart = 0
+	return c
+}
+
+func (c *ChannelLogStack) Out() (stuff []IrcChannelLogMessage) {
+	stuff = make([]IrcChannelLogMessage, 0, len(c.stack))
+
+	for x := 0; x < c.stackLength; x++ {
+		//fmt.Println("putting " + strconv.Itoa((LastTenChannelMessagesStart + x) % 10) + " into " + strconv.Itoa(x))
+		stuff = append(stuff, c.stack[(c.stackStart+x)%len(c.stack)])
+	}
+
+	return
+}
+
+type IrcChannelLogMessage struct {
+	Sender  string
+	Message string
+	T       time.Time
+}
+
+func (i *instance) IrcGetMessageSource(e *irc.Event) string {
 	if len(e.Arguments) == 0 {
 		return e.Message
 	}
 	if strings.HasPrefix(e.Arguments[0], "#") {
+		if e.Arguments[0] != i.Irccfg.Channel {
+			return e.Arguments[0]
+		}
 		return e.Arguments[0]
 	}
 	return e.Nick
 }
 
-func InitIRC() {
+func (i *instance) IrcGetMessageChannel(e *irc.Event) string {
+	if len(e.Arguments) == 0 {
+		return i.Irccfg.Channel
+	}
 
-	Irccon = irc.IRC(Nickname, "natori-gobot")
+	if strings.HasPrefix(e.Arguments[0], "#") {
+		return e.Arguments[0]
+	} else {
+		return i.Irccfg.Channel
+	}
+}
 
-	Irccon.AddCallback("001", func(e *irc.Event) {
-		Irccon.Join(Channel)
-		Irccon.Privmsg("nickserv", "identify "+Nickservpwd)
+func (i *instance) NewMessageSource(e *irc.Event) messagesource {
+	return messagesource{e.Nick, i.IrcGetMessageSource(e), i.IrcGetMessageChannel(e)}
+}
+
+func (e *instance) InitIRC() {
+	i := e
+
+	i.Irclog[i.Irccfg.Channel] = NewChannelLogStack(i.Irccfg.Channel)
+
+	for _, c := range i.Irccfg.Channels {
+		i.Irclog[c] = NewChannelLogStack(c)
+	}
+
+	i.Irc = irc.IRC(i.Irccfg.Nick, "natori-gobot")
+
+	i.Irc.AddCallback("001", func(e *irc.Event) {
+		i.Irc.Privmsg("nickserv", "identify "+i.Irccfg.Nickservpwd)
+		i.Irc.Join(i.Irccfg.Channel)
+		for _, val := range i.Irccfg.Channels {
+			i.Irc.Join(val)
+		}
+
 	})
 
-	Irccon.AddCallback("JOIN", func(e *irc.Event) {
+	i.Irc.AddCallback("JOIN", func(e *irc.Event) {
 		//Irccon.Privmsg(Channel, "Nick: "+e.Nick+" Source: "+e.Source+" GetMsgSource: "+e.GetMessageSource()+" Message: "+e.Message)
-		raise("join", e.Nick, IrcGetMessageSource(e), "")
+		i.raise("join", messagesource{e.Nick, i.IrcGetMessageSource(e), i.IrcGetMessageChannel(e)}, "", false)
 	})
 
-	Irccon.AddCallback("PART", func(e *irc.Event) {
-		raise("part", e.Nick, e.Arguments[0], "")
+	i.Irc.AddCallback("PART", func(e *irc.Event) {
+		if e.Arguments[0] == i.Irccfg.Channel {
+			delete(i.Authenticatednicks, e.Nick)
+		}
+		i.raise("part", messagesource{e.Nick, e.Arguments[0], e.Arguments[0]}, "", false)
 	})
 
-	Irccon.AddCallback("QUIT", func(e *irc.Event) {
-		raise("quit", e.Nick, "", "")
+	i.Irc.AddCallback("QUIT", func(e *irc.Event) {
+		delete(i.Authenticatednicks, e.Nick)
+		i.raise("quit", messagesource{e.Nick, "", ""}, "", i.Authenticated(e.Nick))
 	})
 
 	/*Irccon.AddCallback("MODE", func(e *irc.Event) {
@@ -74,29 +151,76 @@ func InitIRC() {
 	})*/
 
 	//nicklist
-	Irccon.AddCallback("353", func(e *irc.Event) {
-
+	i.Irc.AddCallback("353", func(e *irc.Event) {
+		//fmt.Println(e)
 	})
 
-	Irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
+	i.Irc.AddCallback("NICK", func(e *irc.Event) {
+		delete(i.Authenticatednicks, e.Nick)
+		i.Authenticatednicks[e.Message] = true
+	})
+
+	//whois
+	i.Irc.AddCallback("311", func(e *irc.Event) {
+		//fmt.Println(e)
+	})
+
+	i.Irc.AddCallback("CTCP", func(e *irc.Event) {
+		ctcpsplit := strings.Split(e.Message, " ")
+		i.raise("ctcp:"+ctcpsplit[0], messagesource{e.Nick, "", ""}, strings.TrimPrefix(e.Message, "CTCP "), i.Authenticated(e.Nick))
+	})
+
+	i.Irc.AddCallback("PRIVMSG", func(e *irc.Event) {
+		authed := i.Authenticated(e.Nick)
 		//raise("quit", e.Nick, e.GetMessageSource(), e.Message)
 
-		if e.Message[0] == '!' {
-			call := strings.SplitN(e.Message, " ", 2)
-			raise(call[0], e.Nick, IrcGetMessageSource(e), e.Message[len(call[0]):])
+		if strings.HasPrefix(i.IrcGetMessageSource(e), "#") {
+			if val, ok := i.Irclog[i.IrcGetMessageSource(e)]; ok {
+				val.PushPopFull(IrcChannelLogMessage{Sender: e.Nick, Message: e.Message, T: time.Now()})
+			}
 		}
 
-		raise("privmsg", e.Nick, IrcGetMessageSource(e), e.Message)
+		//Verb
+		if strings.HasPrefix(e.Message, i.Irccfg.Nick) {
+			if strings.ContainsAny(string(e.Message[len(i.Irccfg.Nick)]), ":,~") {
+				withoutnick := e.Message[len(i.Irccfg.Nick)+2:]
+				singlewordsplit := strings.SplitN(withoutnick, " ", 2)
+				twowordsplit := strings.SplitN(withoutnick, " ", 3)
 
-		raiseRegex(e.Nick, IrcGetMessageSource(e), e.Message)
+				if len(singlewordsplit) == 2 {
+					i.raise("verb:"+singlewordsplit[0], i.NewMessageSource(e), singlewordsplit[1], authed)
+				} else if len(singlewordsplit) == 1 {
+					i.raise("verb:"+singlewordsplit[0], i.NewMessageSource(e), "", authed)
+				}
 
+				if len(twowordsplit) == 3 {
+					i.raise("verb:"+twowordsplit[0]+" "+twowordsplit[1], i.NewMessageSource(e), twowordsplit[2], authed)
+				} else if len(twowordsplit) == 2 {
+					i.raise("verb:"+twowordsplit[0]+" "+twowordsplit[1], i.NewMessageSource(e), "", authed)
+				}
+			}
+		}
+
+		//Bang-Commands
+		if e.Message[0] == '!' {
+			call := strings.SplitN(e.Message, " ", 2)
+			if len(call) == 2 {
+				i.raise(call[0], i.NewMessageSource(e), call[1], authed)
+			} else {
+				i.raise(call[0], i.NewMessageSource(e), "", authed)
+			}
+
+		}
+
+		//Irccon.SendRaw("WHOIS " + e.Nick)
+		i.raise("privmsg", i.NewMessageSource(e), e.Message, authed)
+		i.raiseRegex(i.NewMessageSource(e), e.Message, authed)
 	})
 
-	err := Irccon.Connect(Server)
+	err := i.Irc.Connect(i.Irccfg.Host)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		fmt.Printf("%#v\n", Irccon)
-		os.Exit(1)
+		//return nil
 	}
 
+	//return nil
 }

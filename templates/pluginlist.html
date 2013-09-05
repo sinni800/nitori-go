@@ -1,0 +1,52 @@
+{{$root := .}}
+<h1> Plugin hub </h1>
+<table border="1">
+	<thead>
+		<tr>
+			<th>File Name</th>
+			<th></th>
+			<th>Loaded</th>
+			<th>Functions</th>
+			<th>Actions</th>
+			{{range .instances}} 
+			<th>{{.}}</th>
+			{{end}}
+			<th>all</th>
+		</tr>
+	</thead>
+	<tbody>
+		{{range .plugins}}
+		{{$pass := .}}
+		<tr>
+			<td>{{.name}}</td>
+			<td>{{if .file}}File Exists{{end}}</td>
+			<td>{{range $key, $value := .loaded}}{{$key}}, {{end}}</td>
+			<td>{{range .functions}}{{.}}, {{end}}</td>
+			<td>
+				{{if .file}}<a href="/plugins/edit?name={{.name}}">Edit</a> 
+				<a href="/plugins/delete?name={{.name}}">Delete</a>{{end}}
+
+			</td>
+			{{range $.instances}}
+				<td>
+				{{if $pass.file}}<a href="/plugins/load?name={{$pass.name}}&instance={{.}}">(Re-)load</a>{{end}}
+				{{if index $pass.loaded .}}
+				<a href="/plugins/unload?name={{$pass.name}}&instance={{.}}">Unload</a>
+				{{end}}
+				</td>				
+			{{end}}
+			<td>
+				<a href="/plugins/load?name={{$pass.name}}&instance=all">(Re-)load</a>
+				<a href="/plugins/unload?name={{$pass.name}}&instance=all">Unload</a>
+			 </td>
+		</tr>
+		{{end}}
+	</tbody>
+</table>
+
+Create new:
+
+<form action="/plugins/edit" method="GET">
+	<input type="text" name="name" /> <br />
+	<input type="submit" value="Create" />
+</form>

@@ -1,0 +1,10 @@
+<h2>Shares:</h2>
+
+<ul>
+{{range $i, $e := .fs}}
+{{if index $.fsrights $i}}
+<li><a href="/Files/{{$i}}/">{{$i}}</a></li>
+{{end}}
+{{end}}
+<li><a href="/Files/Grid/">GridFS</a></li>
+</ul>

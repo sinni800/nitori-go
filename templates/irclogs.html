@@ -1,0 +1,14 @@
+<h1> IRC Logs </h1>
+
+{{range .}}
+	{{$inst := .}}
+	{{if .Irccfg.UseIrc}}
+		<h4>{{.Name}}</h4>
+		<ul>
+			<li><a href="/IRC/Log?inst={{.Name | urlquery}}&chan={{.Irccfg.Channel | urlquery}}">{{.Irccfg.Channel}}</a></li>
+			{{range .Irccfg.Channels}}
+				<li><a href="/IRC/Log?inst={{$inst.Name | urlquery}}&chan={{. | urlquery}}">{{.}}</a></li>
+			{{end}}
+		</ul>
+	{{end}}
+{{end}}

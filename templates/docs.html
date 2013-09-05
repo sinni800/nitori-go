@@ -1,0 +1,22 @@
+<h1>IRC Command docs</h1>
+
+<style>
+	.doclist li {
+		margin-top: 10px;
+	}
+</style>
+
+{{range $pluginname, $plugindocs := .}}
+	{{if $plugindocs}}
+	<h2>Plugin {{$pluginname}}</h2>
+	
+	<ul class="doclist">
+		{{range $command, $text := .}}
+		<li>
+			<b>{{html $command}}:</b>
+			{{html $text}}
+		</li>
+		{{end}}
+	</ul>
+	{{end}}
+{{end}}

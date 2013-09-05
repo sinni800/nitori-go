@@ -1,0 +1,18 @@
+<table>
+	<thead>
+		<tr>
+			<th></th>
+	</thead>
+	<tbody>
+		{{range .}}
+			<tr>
+				<td>
+					{{.name}}
+				</td>
+				<td>
+					{{.face}}
+				</td>
+			</tr>
+		{{end}}
+	</tbody>
+</table>

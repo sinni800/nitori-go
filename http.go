@@ -11,190 +11,103 @@ import (
 	"net/url"
 	//"net/http/httputil"
 	//"strconv"
-	"os"
+
 	//"bufio"
-	"flag"
 	"math/big"
 	//"time"
-	"path/filepath"
 	//"strings"
-	"io/ioutil"
+
 )
-
-var fHttplisten *string = flag.String("httplisten", "0.0.0.0:1339", "HTTP Listen address")
-var fHttp *bool = flag.Bool("http", false, "Listen on http?")
-var fHttpslisten *string = flag.String("httpslisten", "0.0.0.0:1340", "HTTPS Listen address")
-var fHttps *bool = flag.Bool("https", false, "Listen on https?")
-var fHttpsCertFile *string = flag.String("httpscert", "sslcert.pem", "Https certificate PEM file")
-var fHttpsKeyFile *string = flag.String("httpskey", "sslprivkey.pem", "Https private key PEM file")
-var fHttphostname *string = flag.String("httphostname", "natori.com", "HTTP hostname (used for some URLs)")
-var Httplisten string
-var Http bool
-var Httpslisten string
-var Https bool
-var HttpsCertFile string
-var HttpsKeyFile string
-var Httphostname string
-
-func init() {
-	flag.Parse()
-	Httplisten = *fHttplisten
-	Http = *fHttp
-	Httpslisten = *fHttpslisten
-	Https = *fHttps
-	HttpsCertFile = *fHttpsCertFile
-	HttpsKeyFile = *fHttpsKeyFile
-	Httphostname = *fHttphostname
-}
-
-func HttpHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	http.HandleFunc(pattern, handler)
-}
 
 func handleHttpFuncs() {
 
 	HttpHandleFunc("/", func(w http.ResponseWriter, rew *http.Request) {
-		Template("").Execute(w, nil)
-	})
+		err := Template("").Execute(w, nil)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+		}
+	}, false)
 
-	HttpHandleFunc("/Gelbooru/Random", GelRandom)
+	HttpHandleFunc("/kawaii", Kawaiiface, false)
+	HttpHandleFunc("/dna", DNA, false)
+	HttpHandleFunc("/show1", Showsinglecolumn, false)
+	HttpHandleFunc("/Gelbooru/Random", GelRandom, false)
 
-	HttpHandleFunc("/FileUpload", GridFSFile)
-	HttpHandleFunc("/FileDelete", GridFSDelete)
-	HttpHandleFunc("/Files/", GridFSDL)
-	HttpHandleFunc("/Files", GridFSDL)
-	HttpHandleFunc("/Auth", Auth)
-	HttpHandleFunc("/CreateUser", CreateUser)
+	HttpHandleFunc("/Auth", Auth, false)
+	HttpHandleFunc("/Logout", Logout, false)
+	HttpHandleFunc("/CreateUser", CreateUser, true)
 
-	HttpHandleFunc("/plugins", PluginList)
-	HttpHandleFunc("/plugins/edit", PluginEdit)
-	HttpHandleFunc("/plugins/load", PluginLoad)
-	HttpHandleFunc("/plugins/unload", PluginUnload)
-	HttpHandleFunc("/plugins/delete", PluginDelete)
+	HttpHandleFunc("/docs", Documentation, false)
+
+	HttpHandleFunc("/IRC", HttpIRC, false)
+	HttpHandleFunc("/IRC/Log", HttpIRCLog, false)
+
+	FileHttp()
+	PluginHttp()
 
 	u, _ := url.Parse("http://metalgearsonic.de/scripts/ace/") //I just host it here :)
 	http.Handle("/scripts/ace/", http.StripPrefix("/scripts/ace/", NewSingleHostReverseProxy(u)))
 
 }
 
-func PluginList(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
-	plugins := make(map[string]map[string]interface{})
-	filepath.Walk("plugins", func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			_, filename := filepath.Split(path)
-			plugins[filename] = make(map[string]interface{})
-			plugins[filename]["file"] = true
-			plugins[filename]["name"] = filename
-
+func HttpHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request), auth bool) {
+	http.HandleFunc(pattern, func(w http.ResponseWriter, rew *http.Request) {
+		if auth && HttpAuthenticate(w, rew) {
+			handler(w, rew)
+		} else if !auth {
+			handler(w, rew)
+		} else {
+			return
 		}
-		return nil
 	})
-
-	for key, value := range pluginfuncs {
-		if _, ok := plugins[key]; !ok {
-			plugins[key] = make(map[string]interface{})
-		}
-
-		plugins[key]["loaded"] = true
-		funcs := make([]string, 0, len(value))
-		for key1, _ := range value {
-			funcs = append(funcs, key1)
-		}
-		plugins[key]["functions"] = funcs
-		plugins[key]["name"] = key
-	}
-	Template(TemplatePluginlist).Execute(w, plugins)
 }
 
-func PluginEdit(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
-	rew.ParseForm()
-	name := rew.Form.Get("name")
-
-	if rew.Method == "GET" {
-		content, err := ioutil.ReadFile("plugins\\" + name)
-		if err != nil {
-			content = []byte("")
+func HttpHandle(pattern string, handler http.Handler, auth bool) {
+	http.HandleFunc(pattern, func(w http.ResponseWriter, rew *http.Request) {
+		if auth && HttpAuthenticate(w, rew) {
+			handler.ServeHTTP(w, rew)
+		} else if !auth {
+			handler.ServeHTTP(w, rew)
+		} else {
+			return
 		}
-		Template(TemplatePluginedit).Execute(w, map[string]string{"name": name, "content": string(content)})
-	} else if rew.Method == "POST" {
-		content := rew.FormValue("content")
-		filename := rew.FormValue("filename")
-
-		if filename != name {
-			err := os.Remove("plugins\\" + name)
-			if err != nil {
-				fmt.Println("Could not delete old file:", name, filename, err.Error())
-			}
-			name = filename
-		}
-
-		if content != "" {
-			ioutil.WriteFile("plugins\\"+name, []byte(content), 0)
-		}
-		w.Header().Add("Location", "/plugins")
-		w.WriteHeader(303)
-	}
-
+	})
 }
 
-func PluginDelete(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
+func HttpIRC(w http.ResponseWriter, rew *http.Request) {
+	Template(TemplateIRCLogs).Execute(w, conf.Instances)
+}
+
+func HttpIRCLog(w http.ResponseWriter, rew *http.Request) {
 	rew.ParseForm()
-	name := rew.FormValue("name")
-	err := os.Remove("plugins\\" + name)
-	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
+
+	inst := rew.FormValue("inst")
+	channel := rew.FormValue("chan")
+
+	if i, ok := conf.Instances[inst]; ok {
+		if log, ok2 := i.Irclog[channel]; ok2 {
+			out := make(map[string]interface{})
+			out["log"] = log.Out()
+			out["chan"] = channel
+			out["inst"] = i
+			Template(TemplateIRCLatest).Execute(w, out)
+			return
+		}
+	}
+
+	http.NotFound(w, rew)
+}
+
+func Documentation(w http.ResponseWriter, rew *http.Request) {
+	if val, ok := conf.Instances[conf.DocInstance]; ok {
+		Template(TemplateDocs).Execute(w, val.Plugindocs)
 	} else {
-		w.Header().Add("Location", "/plugins")
-		w.WriteHeader(303)
-	}
-}
-
-func PluginLoad(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
-	rew.ParseForm()
-	name := rew.FormValue("name")
-	err := loadpluginname(name)
-	if err != nil {
 		w.WriteHeader(500)
-		w.Write([]byte(err.Error()))
-	} else {
-		w.Header().Add("Location", "/plugins")
-		w.WriteHeader(303)
-	}
-}
-
-func PluginUnload(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
-	rew.ParseForm()
-	name := rew.FormValue("name")
-	err := unloadpluginname(name)
-	if err != nil {
-		w.Write([]byte(err.Error()))
-		w.WriteHeader(500)
-	} else {
-		w.Header().Add("Location", "/plugins")
-		w.WriteHeader(303)
+		w.Write([]byte("No doc instance defined or doc instance does not exist."))
 	}
 }
 
 func CreateUser(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
 	w.Header().Add("Content-Type", "text/html; charset=UTF-8")
 	if rew.Method == "POST" {
 		var Users *mgo.Collection = MongoDB.C("users")
@@ -237,7 +150,6 @@ func CheckAuthCookie(rew *http.Request) bool {
 }
 
 func Auth(w http.ResponseWriter, rew *http.Request) {
-	w.Header().Add("Content-Type", "text/html; charset=UTF-8")
 	rew.ParseForm()
 	if rew.Method == "POST" {
 		md5 := crypto.MD5.New()
@@ -259,124 +171,40 @@ func Auth(w http.ResponseWriter, rew *http.Request) {
 	} else if rew.Method == "GET" {
 		Template(TemplateLogin).Execute(w, nil)
 	}
-
 }
 
-func GridFSDL(w http.ResponseWriter, rew *http.Request) {
-	auth := CheckAuthCookie(rew)
+func Logout(w http.ResponseWriter, req *http.Request) {
+	w.Header().Add("Set-Cookie", "loginuser=; expires=Thu, 01 Jan 1970 00:00:00 GMT")
+	w.Header().Add("Set-Cookie", "loginpwd=; expires=Thu, 01 Jan 1970 00:00:00 GMT")
+	w.Header().Add("Location", "/")
+	w.WriteHeader(303)
+}
 
-	if len(rew.URL.Path) < 7 {
-		w.Header().Add("Content-Type", "text/html; charset=UTF-8")
-		io.WriteString(w, "<!DOCTYPE html>\r\n"+
-			"<html><head></head><body>")
-
-		coll := MongoDB.C("fs.files")
-
-		var result bson.M
-
-		iter := coll.Find(nil).Iter()
-
-		for {
-			success := iter.Next(&result)
-
-			if success {
-				io.WriteString(w, "<a href=\"/Files/"+result["filename"].(string)+"\">"+result["filename"].(string)+"</a> ")
-				if auth {
-					io.WriteString(w, `<a href="/FileDelete?file=`+result["filename"].(string)+`">Delete</a> <br />`)
-				}
-			} else {
-				break
-			}
-		}
-
-		io.WriteString(w, "</body></html>")
+func Showsinglecolumn(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+	if req.Form.Get("c") != "" {
+		coll := MongoDB.C(req.Form.Get("c"))
+		var result []bson.M
+		coll.Find(nil).All(&result)
+		Template(TemplateSingleColumnTable).Execute(w, result)
 	} else {
-		if rew.URL.Path[7:] != "" {
-			var GridFS *mgo.GridFS = MongoDB.GridFS("fs")
-			GridFile, err := GridFS.Open(rew.URL.Path[7:])
-			if err == nil {
-
-				http.ServeContent(w, rew, GridFile.Name(), GridFile.UploadDate(), GridFile)
-
-			} else {
-				http.NotFound(w, rew)
-			}
-		}
+		http.NotFound(w, req)
 	}
 }
 
-func GridFSDelete(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
+func DNA(w http.ResponseWriter, rew *http.Request) {
+	coll := MongoDB.C("dna")
+	var result []bson.M
+	coll.Find(nil).All(&result)
+	Template(TemplateDNATable).Execute(w, result)
 
-	rew.ParseForm()
-	if rew.Form.Get("file") != "" {
-		GridFS := MongoDB.GridFS("fs")
-		err := GridFS.Remove(rew.Form.Get("file"))
-		if err != nil {
-			io.WriteString(w, "could not delete: "+err.Error())
-		} else {
-			io.WriteString(w, "File deleted.")
-		}
-	}
 }
 
-func GridFSFile(w http.ResponseWriter, rew *http.Request) {
-	if !HttpAuthenticate(w, rew) {
-		return
-	}
-	if rew.Method == "POST" {
-		fmt.Println("METHOD WAS POST")
-		GridFS := MongoDB.GridFS("fs")
-		var file *mgo.GridFile
-		var filename string
-
-		rew.ParseMultipartForm(500000)
-		formfileheaderarr := rew.MultipartForm.File["file"]
-		formfileheader := formfileheaderarr[0]
-		formfile, err := formfileheader.Open()
-
-		//formfile, formfileheader, err := rew.FormFile("file")
-		if err == nil {
-			if rew.FormValue("filename") == "" {
-				filename = formfileheader.Filename
-			} else {
-				filename = rew.FormValue("filename")
-			}
-			fmt.Println(filename)
-
-			file, err = GridFS.Create(filename)
-
-			if err == nil {
-
-				_, err = io.Copy(file, formfile)
-				if err == nil {
-					file.SetContentType(formfileheader.Header.Get("Content-Type"))
-					err = file.Close()
-					if err == nil {
-						w.Header().Add("Content-Type", "text/html; charset=UTF-8")
-						io.WriteString(w, "<!DOCTYPE html>\r\n"+
-							"<html><head></head><body>File uploaded, get here: <a href=\"/Files/"+filename+"\">"+filename+"</a></body></html>")
-					}
-				}
-			}
-
-		}
-
-		if err != nil {
-			io.WriteString(w, "Error occured: "+err.Error())
-		}
-
-		//GridFS.Create(
-		//io.Copy()
-		//rew.FormFile("file").
-	} else if rew.Method == "GET" {
-		w.Header().Add("Content-Type", "text/html; charset=UTF-8")
-		io.WriteString(w, "<!doctype html>\r\n"+
-			"<html><head></head><body><form enctype=\"multipart/form-data\" action=\"/FileUpload\" method=\"POST\">File: <input type=\"file\" name=\"file\" /><br />Filename: <input type=\"text\" name=\"filename\" /><br /><input type=\"submit\" name=\"submit\" value=\"Submit\" /></form></body></html>")
-	}
-
+func Kawaiiface(w http.ResponseWriter, rew *http.Request) {
+	coll := MongoDB.C("kawaiiface")
+	var result []bson.M
+	coll.Find(nil).All(&result)
+	Template(TemplateKawaiiTable).Execute(w, result)
 }
 
 func GelRandom(w http.ResponseWriter, rew *http.Request) {

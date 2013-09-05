@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+	<head>
+		<style type="text/css"> 
+			a:visited{
+				color:blue;
+			}
+			ul.nav li {
+				display:inline;
+			}
+			/*
+			@-webkit-keyframes rotateBody {
+				from { 
+					-webkit-transform: rotatez(0deg);
+					-webkit-transform-origin: 50% 50%;
+				}
+				to	{ 
+					-webkit-transform: rotatez(360deg);
+					-webkit-transform-origin: 50% 50%;
+				}
+			}
+			
+			@-moz-keyframes rotateBody {
+				from { 
+					-moz-transform: rotatez(0deg);
+					-moz-transform-origin: 50% 50%;
+				}
+				to	{ 
+					-moz-transform: rotatez(360deg);
+					-moz-transform-origin: 50% 50%;
+				}
+			}
+			
+			@-ms-keyframes rotateBody {
+			   from {
+				-ms-transform: rotatez(0deg);
+				-ms-transform-origin: 50% 50%;
+				}
+			   to {
+				-ms-transform: rotatez(360deg);
+				-ms-transform-origin: 50% 50%;
+				}
+			}
+						
+			@keyframes rotateBody {
+				from { 
+					transform: rotatez(0deg);
+					transform-origin: 50% 50%;
+				}
+				to	{ 
+					transform: rotatez(360deg);
+					transform-origin: 50% 50%;
+				}
+			} 
+			
+			body { 
+				-webkit-animation: rotateBody 20s linear 0s infinite;
+				-moz-animation: rotateBody 20s linear 0s infinite;
+				-ms-animation: rotateBody 20s linear 0s infinite;
+				animation: rotateBody 20s linear 0s infinite;
+			} */
+			
+			body {
+				margin-left: 40px;
+				margin-top: 40px;
+			}
+		</style>
+	</head>
+	<body>
+		Guest: 
+		<ul class="nav">
+				<li><a href="/kawaii">Kawaiiface</a></li>
+				<li><a href="/dna">DNA</a></li>
+				<li><a href="/show1?c=joke">Joke</a></li>
+				<li><a href="/show1?c=rape">Rape</a></li>
+				<li><a href="/show1?c=kill">Kill</a></li>
+				<li><a href="/show1?c=factoid">Factoid</a></li>
+				<li><a href="/show1?c=yomama">Yomama</a></li>
+				<li><a href="/show1?c=wortwitz">Wortwitz</a></li>
+				<li><a href="/Gelbooru/Random">Gelbooru Random</a></li>
+				<li><a href="/Files">Files</a></li>
+				<li><a href="/docs">IRC command reference</a></li>
+				<li><a href="/IRC">IRC Logs</a></li>
+				<li><a href="/Auth">Login</a></li>
+				
+				<!--<li><a href="/Irc">Irc</a></li>
+				<li><a href="/Irc/Latest">IrcLog</a></li>--> 
+		</ul>
+		
+		Admin: 
+		<ul class="nav">
+			<li><a href="/CreateUser">CreateUser</a></li>
+			<li><a href="/plugins">Plugin Manager</a></li>
+		</ul>
+	
+		{{template "content" .}}
+	</body>
+</html>

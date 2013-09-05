@@ -9,12 +9,12 @@ type a struct {
 	C func() string
 }
 
-func testit() {
-	val, err := js.ToValue(a{"h", func() string { return "h" }})
+func (i *instance) testit() {
+	val, err := i.js.ToValue(a{"h", func() string { return "h" }})
 	if err != nil {
 		println(err.Error())
 	} else {
-		_, err := js.Run(`
+		_, err := i.js.Run(`
 		
 			function lol(input) {
 				console.log(input.C())
@@ -24,7 +24,7 @@ func testit() {
 		if err != nil {
 			println(err.Error())
 		} else {
-			_, err := js.Call("lol", nil, val)
+			_, err := i.js.Call("lol", nil, val)
 			if err != nil {
 				println(err.Error())
 			}

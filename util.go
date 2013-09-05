@@ -10,7 +10,14 @@ import (
 	"strings"
 )
 
-func Args(s string) []string {
+func Args(s string) (result []string) {
+
+	defer func() {
+		if recover() != nil {
+			result = make([]string, 0, 0)
+		}
+	}()
+
 	inStr := false
 	escape := false
 	return strings.FieldsFunc(s, func(r rune) bool {

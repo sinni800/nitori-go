@@ -1,0 +1,59 @@
+configs: 
+# give every configuration a name here
+  freenode: 
+# every configuration name has to contain an irc instance with data
+    irc:
+      useIRC: true
+      host: irc.freenode.net:6667
+      primarychannel: "#go-nuts"
+      channels: []
+      nick: "botnick"
+      nickservpwd: nickservpassword
+  docinst:
+    irc:
+      useIRC: false
+# this is for mongodb access (GridFS filesystem uses it, also for the javascript DB commands
+mongo:
+  useMongo: false
+  mongoAddress: mongodb://user:pwd@hostname/db
+  mongoDatabase: db
+# web settings here
+web:
+  http: false
+  httplisten: 127.0.0.1:5433
+  https: false
+  httpslisten: 0.0.0.0:443
+  httpscertfile: sslcert.pem
+  httpskeyfile: sslprivkey.pem
+  hostname: somehostname
+  templatedir: templates
+# file systems here
+filesystems:
+  dropbox: 
+    path: C:\Users\lhbjod0\testfolder\
+    readAuth: false
+    listAuth: false
+    zipAuth: false
+    uploadAuth: false
+    createfolderAuth: false
+    deleteAuth: false
+  publicupload:
+    path: c:\users\lhbjod0\testfolder\
+    readAuth: true
+    listAuth: true
+    zipAuth: true
+    uploadAuth: false
+    createFolderAuth: true
+    deleteAuth: true
+# debug mode of the sms package (sinni800/sms77) 
+smsdebug: false
+# contains the plugins
+plugindir: plugins
+# documentation instance - is usually docinst (an instance without irc, nothing more)
+# the documentation instance is used to show the Documentation web page
+# this page contains all texts that were entered with the "Doc()" javascript function
+docInstance: docinst
+# filesystem used as the root for IRC DCC transfering
+dccFilesystem: publicupload
+# external IP used for IRC DCC transfers
+externalIP: 127.0.0.1

@@ -1,0 +1,4 @@
+<a href="irc://{{.inst.Irccfg.Host}}/{{.channel}}">{{.inst.Irccfg.Host}}/{{.channel}}</a>
+<pre>
+{{range .log}}[{{.T}}] {{.Sender}}: {{.Message}}
+{{end}}</pre>
