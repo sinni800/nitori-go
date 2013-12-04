@@ -136,7 +136,14 @@ func main() {
 
 	if conf.Mongo.UseMongo {
 		connectDB()
-
+		
+		go func() {
+			for { 
+				time.Sleep(5 * time.Second)
+				fmt.Println("Ping: ", MongoSession.Ping())
+			}
+		}()
+		
 		go func() {
 			for {
 				time.Sleep(5 * time.Minute)

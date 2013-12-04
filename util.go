@@ -7,6 +7,7 @@ import (
 	"net/http/httputil"
 	//"time"
 	"net/url"
+	"path/filepath"
 	"strings"
 )
 
@@ -68,8 +69,41 @@ func singleJoiningSlash(a, b string) string {
 	return a + b
 }
 
+type Ftypes struct {
+	WebAudio bool
+	Audio    bool
+	Video    bool
+	WebVideo bool
+	Flash    bool
+	Image    bool
+	DirectlyViewable bool
+}
+
+func Filetypes(filename string) Ftypes {
+	ext := filepath.Ext(filename)
+	ret := Ftypes{}
+	e := strings.ToLower(ext)
+	ret.Audio = StringIsOneOf(e, ".wma", ".mp3", ".aac", ".flac", ".ogg", ".opus")
+	ret.WebAudio = StringIsOneOf(e, ".mp3", ".ogg", ".wav", ".opus")
+	ret.Video = StringIsOneOf(e, ".mkv", ".mp4", ".wmv", ".webm", ".avi")
+	ret.WebVideo = StringIsOneOf(e, ".mp4", ".webm", ".ogv")
+	ret.Flash = StringIsOneOf(e, ".swf")
+	ret.Image = StringIsOneOf(e, ".jpg", ".gif", ".png", ".jpeg", ".tiff", ".tif", ".webp")
+	ret.DirectlyViewable = ret.Image || ret.Flash || ret.WebVideo || ret.WebAudio
+	return ret
+}
+
+func StringIsOneOf(str string, things ...string) bool {
+	for _, s := range things {
+		if str == s {
+			return true
+		}
+	}
+	return false
+}
+
 type Post struct {
-	File_url, Id, Url string
+	File_url, Id, Url, Tags string
 }
 
 func GelbooruGet(tags string) (Posts []Post, err error) {
@@ -115,6 +149,8 @@ func GelbooruGet(tags string) (Posts []Post, err error) {
 						Post.Id = elmt.Attr[i].Value
 						Post.Url = "http://gelbooru.com/index.php?page=post&s=view&id=" + Post.Id
 						break
+					case "tags":
+						Post.Tags = elmt.Attr[i].Value
 					}
 				}
 

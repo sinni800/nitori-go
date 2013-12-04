@@ -3,11 +3,16 @@ package main
 import (
 	"code.google.com/p/go.net/html"
 	"net/http"
+	"os"
 	"strings"
 )
 
 func (i *instance) RegisterIRCCoreFuncs() {
-	i.Corefuncs["!loadplugin"] = func(source messagesource, line string, parameters []string) {
+	i.Corefuncs["#!exit"] = func(source messagesource, line string, parameters []string) {
+		os.Exit(0)
+	}
+
+	i.Corefuncs["#!loadplugin"] = func(source messagesource, line string, parameters []string) {
 		err := i.loadpluginname(parameters[0])
 		if err != nil {
 			i.Irc.Privmsg(source.Source, "Error occured: "+err.Error())
@@ -16,7 +21,7 @@ func (i *instance) RegisterIRCCoreFuncs() {
 		}
 	}
 
-	i.Corefuncs["!unloadplugin"] = func(source messagesource, line string, parameters []string) {
+	i.Corefuncs["#!unloadplugin"] = func(source messagesource, line string, parameters []string) {
 		err := i.unloadpluginname(parameters[0])
 
 		if err != nil {
@@ -26,7 +31,7 @@ func (i *instance) RegisterIRCCoreFuncs() {
 		}
 	}
 
-	i.Corefuncs["!pluginlist"] = func(source messagesource, line string, parameters []string) {
+	i.Corefuncs["#!pluginlist"] = func(source messagesource, line string, parameters []string) {
 
 		out := ""
 

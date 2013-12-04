@@ -66,6 +66,11 @@ func SaveToDB(collection string, stuff bson.M) error {
 	return coll.Insert(stuff)
 }
 
+func UpdateInDB(collection string, search bson.M, stuff bson.M) error {
+	coll := MongoDB.C(collection)
+	return coll.Update(search, stuff)
+}
+
 func ExistsInDB(collection string, stuff bson.M) bool {
 	coll := MongoDB.C(collection)
 	if count, _ := coll.Find(stuff).Count(); count > 0 {

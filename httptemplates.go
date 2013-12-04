@@ -24,10 +24,14 @@ var (
 	TemplateFileUploaded      = `fileuploaded.html`
 	TemplateIRCLogs           = `irclogs.html`
 	TemplateIRCLatest         = `irclatest.html`
+	TemplateMongoTable = `mongotable.html`
 )
 
 func init() {
+	TemplFuncs["ftypes"] = Filetypes
 }
+
+var TemplFuncs = make(template.FuncMap)
 
 func Template(subtmpl string) *template.Template {
 	templ := template.New("main")
@@ -37,6 +41,8 @@ func Template(subtmpl string) *template.Template {
 	if err != nil {
 		skel = []byte(`Could not load skeleton template <br /> {{template "content" .}}`)
 	}
+
+	templ.Funcs(TemplFuncs)
 
 	_, err = templ.Parse(string(skel))
 

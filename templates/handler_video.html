@@ -1,0 +1,6 @@
+{{.}}
+<br />
+<video src="{{.}}" controls preload="none" style="width: 768; height: 432;">
+</video>
+<br />
+<a href="{{.}}">Download</a>

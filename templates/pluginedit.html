@@ -27,7 +27,7 @@
 
 	<p>
 		<h3>Defining a function:</h3>
-		use <pre> Subscribe(string trigger, function(sender, source, line, params) handler) </pre> to define a function. <br />
+		use <pre> Subscribe(string trigger, function(source, line, params) handler) </pre> to define a function. <br />
 		The following trigger types are defined:
 		
 		<ul>
@@ -37,6 +37,7 @@
 			<li>part - Triggers when someone leaves the channel</li>
 			<li>quit - Triggers when someone disconnects from irc</li>
 			<li>regex: - Type a regex on which it will trigger after the colon (:)</li>
+			<li>verb: - Type a verb which will trigger like "botname: verb"</li>
 		</ul>
 		
 		The handler function has the following parameters:
@@ -79,6 +80,7 @@
 					<li>IRC.Channel - Contains the main channel of the bot</li>
 					<li>IRC.Server - Contains the current server name</li>
 					<li>IRC.Nick - Contains the nick of the bot</li>
+					<li>IRC.DCCSend(nick, filename) - Sends a DCC file from the primary DCC file collection (see config)</li>
 				</ul>
 			</li>
 			<li>
@@ -86,11 +88,16 @@
 				<ul>
 					<li>DB.Authenticate(user, pwd) - Authenticates against the user database</li>
 					<li>DB.SaveToDb</li>
+					<li>DB.UpdateInDB</li>
 					<li>DB.ExistsInDB</li>
+					<li>DB.GetFromDB</li>
 					<li>DB.GetRandomFromDB</li>
 					<li>DB.GetAndDeleteFirstFromDB</li>
 					<li>DB.GetNamedFromDB</li>
 					<li>DB.SaveNamedToDB</li>
+					<li>DB.DeleteFromDB</li>
+					<li>DB.Reconnect</li>
+					<li>DB.LastError</li>
 				</ul>
 			</li>
 			<li>
@@ -100,6 +107,7 @@
 						Strings: Body, Statusstring, Status <br /> 
 						Object: Header</li>
 					<li>Lib.IsAuthenticated(Nick) - Checks if the nick is authenticated on the current network</li>
+					<li>Lib.GelbooruGet</li>
 				</ul>
 			</li>
 			<li>

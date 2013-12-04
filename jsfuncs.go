@@ -16,15 +16,15 @@ type jsIRCStruct struct {
 }
 
 type jsDBStruct struct {
-	Authenticate, SaveToDB, ExistsInDB, GetFromDB, GetRandomFromDB,
+	Authenticate, SaveToDB, UpdateInDB, ExistsInDB, GetFromDB, GetRandomFromDB,
 	GetAndDeleteFirstFromDB, GetNamedFromDB, SaveNamedToDB,
 	DeleteFromDB, Reconnect func(call otto.FunctionCall) otto.Value
 	LastError string
 }
 
 type jsLibStruct struct {
-	HttpGet, IsAuthenticated func(call otto.FunctionCall) otto.Value
-	Conf                     *config
+	HttpGet, IsAuthenticated, GelbooruGet func(call otto.FunctionCall) otto.Value
+	Conf                                  *config
 }
 
 type jsSMSStruct struct {
@@ -142,6 +142,38 @@ func (i *instance) RegisterJSFuncs() {
 				}
 
 				err = SaveToDB(call.ArgumentList[0].String(), val.(map[string]interface{}))
+				if err != nil {
+					str, _ := i.js.ToValue(err.Error())
+					return str
+				}
+				return otto.TrueValue()
+			} else {
+				return otto.FalseValue()
+			}
+		},
+		UpdateInDB: func(call otto.FunctionCall) otto.Value {
+			i.Jsobj.DB.LastError = ""
+			if len(call.ArgumentList) == 3 && call.ArgumentList[0].IsString() && call.ArgumentList[1].IsObject() && call.ArgumentList[2].IsObject() {
+				search, err := call.ArgumentList[1].Export()
+				if err != nil {
+					return otto.UndefinedValue()
+				}
+				update, err := call.ArgumentList[2].Export()
+				if err != nil {
+					return otto.UndefinedValue()
+				}
+				
+				search1, ok := search.(map[string]interface{})	
+				if !ok {
+					return otto.UndefinedValue()
+				}
+				
+				update1, ok := update.(map[string]interface{})
+				if !ok {
+					return otto.UndefinedValue()
+				}
+
+				err = UpdateInDB(call.ArgumentList[0].String(), search1, update1)
 				if err != nil {
 					str, _ := i.js.ToValue(err.Error())
 					return str
@@ -343,6 +375,18 @@ func (i *instance) RegisterJSFuncs() {
 				if _, ok := i.Authenticatednicks[call.Argument(0).String()]; ok {
 					return otto.TrueValue()
 				}
+			}
+			return otto.FalseValue()
+		},
+		GelbooruGet: func(call otto.FunctionCall) otto.Value {
+			if len(call.ArgumentList) == 1 && call.ArgumentList[0].IsString() {
+				ret, err := GelbooruGet(call.Argument(0).String())
+				if err != nil {
+					return otto.FalseValue()
+				}
+
+				ret2, _ := i.js.ToValue(ret)
+				return ret2
 			}
 			return otto.FalseValue()
 		},

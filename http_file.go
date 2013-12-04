@@ -24,6 +24,7 @@ func FileHttp() {
 	HttpHandleFunc("/FileDelete", FileDelete, false)
 	HttpHandleFunc("/FileZip", FileZip, false)
 	HttpHandleFunc("/FileCreateFolder", FileCreateFolder, false)
+	//HttpHandle("/FilesAlt/", http.StripPrefix("/Files", http.HandlerFunc(FileHtmlHandler)), false)
 
 	HttpHandle("/Files/", http.StripPrefix("/Files", http.HandlerFunc(Files)), false)
 	HttpHandle("/Files/Grid/", http.StripPrefix("/Files/Grid/", http.HandlerFunc(GridFSDL)), false)
@@ -80,17 +81,21 @@ func FileZip(w http.ResponseWriter, rew *http.Request) {
 			w.Header().Set("Content-Disposition", `attachment; filename="`+filepath.Base(filepath.Clean(zippath))+`.zip"`)
 			zipp := zip.NewWriter(w)
 			err := filepath.Walk(filepath.Clean(string(val.Dir)+zippath), func(path string, info os.FileInfo, err error) error {
-				newpath, _ := filepath.Rel(filepath.Clean(string(val.Dir)+zippath), path)
-				header, _ := zip.FileInfoHeader(info)
-				header.Name = newpath
-				w, _ := zipp.CreateHeader(header)
-				f, err := os.Open(path)
-				if err != nil {
+				if !info.IsDir() {
+					newpath, _ := filepath.Rel(filepath.Clean(string(val.Dir)+zippath), path)
+					header, _ := zip.FileInfoHeader(info)
+					header.Name = newpath
+					w, _ := zipp.CreateHeader(header)
+					f, err := os.Open(path)
+					if err != nil {
+						return nil
+					}
+					io.Copy(w, f)
+					f.Close()
+					return nil
+				} else {
 					return nil
 				}
-				io.Copy(w, f)
-				f.Close()
-				return nil
 			})
 			if err == nil {
 				zipp.Close()
@@ -261,6 +266,7 @@ func FileDelete(w http.ResponseWriter, rew *http.Request) {
 }
 
 func Files(w http.ResponseWriter, rew *http.Request) {
+	rew.ParseForm()
 	p := strings.Split(rew.URL.Path, "/")
 	prefix := ""
 
@@ -280,6 +286,29 @@ func Files(w http.ResponseWriter, rew *http.Request) {
 		return
 	}
 	if len(p) > 1 && p[1] != "" {
+		
+		if _, ok := rew.Form["html"]; ok {
+			hname := rew.FormValue("h")
+			if hname == "" {
+				ft := Filetypes(rew.URL.Path)
+				
+				if ft.WebAudio {
+					hname = "audio"
+				} else if ft.Flash {
+					hname = "flash"
+				} else if ft.Image {
+					hname = "image"
+				} else if ft.WebVideo {
+					hname = "video"
+				}
+			} 
+			
+			Template("handler_" + hname + ".html").Execute(w, "/Files" + rew.URL.Path)
+			return
+		}
+		
+		
+		
 		prefix = p[1]
 		if val, ok := conf.FileSystemPrefixes[prefix]; ok {
 			ok = false

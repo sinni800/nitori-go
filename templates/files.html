@@ -1,25 +1,36 @@
 {{if .authList}}
 <h2>Index of {{.path}} - {{.prefix}}</h2>
-
 <table>
 	{{range .files}}
+	{{$ft := ftypes .Name}}
 	<tr>
 		
 		<td>
 			{{if $.authRead}}
-				<a href="{{.Name}}{{if .IsDir}}/{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
+				{{if $ft.DirectlyViewable}}
+					<a href="{{.Name}}?html">{{.Name}}{{if .IsDir}}/{{end}}</a> (<a href="{{.Name}}">Direct</a>)</td>
+				{{else}}
+					<a href="{{.Name}}{{if .IsDir}}/{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
+				{{end}}
 			{{else}}
 				{{.Name}}{{if .IsDir}}/{{end}}
 			{{end}}
 		{{if $.authDelete}}
 			<td><a href="/FileDelete?file={{$.path}}{{.Name}}&prefix={{$.prefix}}">Delete</a></td>
 		{{end}}
-		{{if .IsDir}}
+		{{if .IsDir}}	
 			{{if $.authZip}}
 				<td><a href="/FileZip?path={{$.path}}\{{.Name}}&prefix={{$.prefix}}">Zip</a></td>
 			{{end}}
 		{{end}}
-
+		
+		
+		{{if $ft.WebAudio}}
+			<td> 
+				<audio src="{{.Name}}" controls preload="none">
+				</audio>
+			</td>
+		{{end}}
 		
 	</tr>
 	{{end}}

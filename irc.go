@@ -181,22 +181,24 @@ func (e *instance) InitIRC() {
 		}
 
 		//Verb
-		if strings.HasPrefix(e.Message, i.Irccfg.Nick) {
-			if strings.ContainsAny(string(e.Message[len(i.Irccfg.Nick)]), ":,~") {
-				withoutnick := e.Message[len(i.Irccfg.Nick)+2:]
-				singlewordsplit := strings.SplitN(withoutnick, " ", 2)
-				twowordsplit := strings.SplitN(withoutnick, " ", 3)
+		if len(e.Message) > len(i.Irccfg.Nick) + 1 {
+			if strings.HasPrefix(e.Message, i.Irccfg.Nick) {
+				if strings.ContainsAny(string(e.Message[len(i.Irccfg.Nick)]), ":,~") {
+					withoutnick := e.Message[len(i.Irccfg.Nick)+2:]
+					singlewordsplit := strings.SplitN(withoutnick, " ", 2)
+					twowordsplit := strings.SplitN(withoutnick, " ", 3)
 
-				if len(singlewordsplit) == 2 {
-					i.raise("verb:"+singlewordsplit[0], i.NewMessageSource(e), singlewordsplit[1], authed)
-				} else if len(singlewordsplit) == 1 {
-					i.raise("verb:"+singlewordsplit[0], i.NewMessageSource(e), "", authed)
-				}
+					if len(singlewordsplit) == 2 {
+						i.raise("verb:"+singlewordsplit[0], i.NewMessageSource(e), singlewordsplit[1], authed)
+					} else if len(singlewordsplit) == 1 {
+						i.raise("verb:"+singlewordsplit[0], i.NewMessageSource(e), "", authed)
+					}
 
-				if len(twowordsplit) == 3 {
-					i.raise("verb:"+twowordsplit[0]+" "+twowordsplit[1], i.NewMessageSource(e), twowordsplit[2], authed)
-				} else if len(twowordsplit) == 2 {
-					i.raise("verb:"+twowordsplit[0]+" "+twowordsplit[1], i.NewMessageSource(e), "", authed)
+					if len(twowordsplit) == 3 {
+						i.raise("verb:"+twowordsplit[0]+" "+twowordsplit[1], i.NewMessageSource(e), twowordsplit[2], authed)
+					} else if len(twowordsplit) == 2 {
+						i.raise("verb:"+twowordsplit[0]+" "+twowordsplit[1], i.NewMessageSource(e), "", authed)
+					}
 				}
 			}
 		}

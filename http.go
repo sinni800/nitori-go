@@ -11,7 +11,7 @@ import (
 	"net/url"
 	//"net/http/httputil"
 	//"strconv"
-
+	"sort"
 	//"bufio"
 	"math/big"
 	//"time"
@@ -31,6 +31,7 @@ func handleHttpFuncs() {
 	HttpHandleFunc("/kawaii", Kawaiiface, false)
 	HttpHandleFunc("/dna", DNA, false)
 	HttpHandleFunc("/show1", Showsinglecolumn, false)
+	HttpHandleFunc("/showtable", ShowTable, false)
 	HttpHandleFunc("/Gelbooru/Random", GelRandom, false)
 
 	HttpHandleFunc("/Auth", Auth, false)
@@ -187,6 +188,35 @@ func Showsinglecolumn(w http.ResponseWriter, req *http.Request) {
 		var result []bson.M
 		coll.Find(nil).All(&result)
 		Template(TemplateSingleColumnTable).Execute(w, result)
+	} else {
+		http.NotFound(w, req)
+	}
+}
+
+func ShowTable(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+	if req.Form.Get("c") != "" {
+		coll := MongoDB.C(req.Form.Get("c"))
+		var stuff []bson.M
+		coll.Find(nil).All(&stuff)
+		cols1 := make(map[string]bool)
+		
+		for _, doc := range stuff {
+			for key, _ := range doc {
+				cols1[key] = true
+			}
+		}
+		
+		cols := make([]string, 0, len(cols1))
+		
+		for key, _ := range cols1 {
+			cols = append(cols, key)
+		}
+		
+		sort.Strings(cols)
+		
+		result := map[string]interface{} {"Data": stuff, "Columns": cols}
+		Template(TemplateMongoTable).Execute(w, result)
 	} else {
 		http.NotFound(w, req)
 	}
